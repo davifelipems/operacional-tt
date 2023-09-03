@@ -1,42 +1,37 @@
 //+------------------------------------------------------------------+
-//|                                                OperacionalTT.mq5 |
+//|                                                OperacionalTT.mqh |
 //|                                  Copyright 2023, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2023, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 #property version   "1.00"
-
-#include <../Experts/operacional-tt/include/OperacionalTT.mqh>
-
-OperacionalTT robo;
-
-//--- input parameters
-input int      periodo_true_range=500;
-//+------------------------------------------------------------------+
-//| Expert initialization function                                   |
-//+------------------------------------------------------------------+
-int OnInit()
+class OperacionalTT
   {
-//---
-    robo.init();  
-//---
-   return(INIT_SUCCEEDED);
+private:
+
+public:
+      OperacionalTT();
+     ~OperacionalTT();
+     
+     void init(){
+         Print("init!");
+     }
+     
+     void tick(){
+         Print("Tick!");
+     }
+  };
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+OperacionalTT::OperacionalTT()
+  {
   }
 //+------------------------------------------------------------------+
-//| Expert deinitialization function                                 |
+//|                                                                  |
 //+------------------------------------------------------------------+
-void OnDeinit(const int reason)
+OperacionalTT::~OperacionalTT()
   {
-//---
-   
-  }
-//+------------------------------------------------------------------+
-//| Expert tick function                                             |
-//+------------------------------------------------------------------+
-void OnTick()
-  {
-//---
-    robo.tick();  
   }
 //+------------------------------------------------------------------+
