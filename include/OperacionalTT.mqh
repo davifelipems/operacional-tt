@@ -8,8 +8,10 @@
 #property version   "1.00"
 
 #include <../experts/operacional-tt/include/Util.mqh>
+#include <../experts/operacional-tt/include/Orders.mqh>
 
 Util util;
+Orders orders;
 
 class OperacionalTT
   {
@@ -24,8 +26,11 @@ public:
      MqlTick  tick;
      double exponential_true_range_avg;
      double simple_true_range_avg;
-     
-     bool temos_nova_vela;
+     double tick_value;
+     double entryPointSt1Buy;
+     double entryPointSt1Sell;
+     bool new_bar;
+     double num_lots;
      
      void init(){
          
@@ -35,10 +40,11 @@ public:
          CopyRates(_Symbol,_Period,0,period_true_range,candles);
          ArraySetAsSeries(candles,true);
          SymbolInfoTick(_Symbol,tick);
-         temos_nova_vela = util.newBar();
+         new_bar = util.newBar();
          
          calculateTrueRangeAvg();
          st1();
+         sendOrder();
      }
      
      int getSequenceHigh(int qtdCandles){
@@ -70,9 +76,45 @@ public:
         return sequenceLow;
      }
      
+     bool sendOrder(){
+        
+        if(PositionsTotal() > 0 ){
+            entryPointSt1Sell = 0;
+            entryPointSt1Buy = 0;
+            ObjectDelete(0, "sell here");
+            ObjectDelete(0, "buy here");
+            return false;
+         }
+        
+        if(entryPointSt1Sell == 0 && entryPointSt1Buy == 0){
+            return false;
+        }
+        
+        
+        if(entryPointSt1Sell > 0 && tick.last > entryPointSt1Sell){
+            double stop_loss_price = tick.last + (exponential_true_range_avg * 1.5);//Stop 1.5 TR
+            double tp_price = tick.last - exponential_true_range_avg;               // TP 1 TR
+            orders.sell(num_lots, stop_loss_price,tp_price);
+             util.textCreate(0,"Sell ST1",0,candles[1].time,candles[1].low,
+            "Venda de ST1 TR "+DoubleToString(exponential_true_range_avg, 2)
+            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);
+        }
+        
+        if(entryPointSt1Buy > 0 && tick.last < entryPointSt1Buy){
+            double stop_loss_price = tick.last - (exponential_true_range_avg * 1.5); //Stop 1.5 TR
+            double tp_price = tick.last + exponential_true_range_avg;                // TP 1 TR
+            orders.buy(num_lots, stop_loss_price,tp_price);
+            util.textCreate(0,"Buy ST1",0,candles[1].time,candles[1].low,
+            "Compra de ST1 TR "+DoubleToString(exponential_true_range_avg, 2)
+            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);
+        }
+        
+        return true;
+     }
+     
      bool st1(){
         
-        if(temos_nova_vela == false){
+        if(new_bar == false){
             return false;
          }
        
@@ -81,12 +123,15 @@ public:
         
         if(sequenceHigh == 5){
             util.arrowedLineCreate(0,"ST1 de alta",0,
-                           candles[5].time,candles[5].high,
+                           candles[5].time,candles[5].low,
                            candles[1].time,candles[1].low,
                            clrAntiqueWhite,STYLE_DOT,1,false,false);
-            util.textCreate(0,"ST1 de alta-descricao",0,candles[3].time,candles[3].high,
+            util.textCreate(0,"ST1 de alta-description",0,candles[3].time,candles[3].low,
             "ST1 de alta"
-            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);            
+            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);
+            entryPointSt1Buy = candles[1].close - (tick_value * 4); // 4ticks
+            
+            util.drawHorizontalLine("buy here",candles[1].time,entryPointSt1Buy,clrCadetBlue);            
         }
         
         if(sequenceLow == 5){
@@ -94,9 +139,11 @@ public:
                            candles[5].time,candles[5].high,
                            candles[1].time,candles[1].low,
                            clrAntiqueWhite,STYLE_DOT,1,false,false);
-            util.textCreate(0,"ST1 de baixa-descricao",0,candles[3].time,candles[3].high,
+            util.textCreate(0,"ST1 de baixa-description",0,candles[3].time,candles[3].high,
             "ST1 de baixa"
-            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);                
+            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0); 
+            entryPointSt1Sell = candles[1].close + (tick_value * 4); // 4ticks
+            util.drawHorizontalLine("sell here",candles[1].time,entryPointSt1Sell,clrCrimson);                
         }
           
         return true;
@@ -105,7 +152,7 @@ public:
      
      bool calculateTrueRangeAvg(){
      
-         if(temos_nova_vela == false){
+         if(new_bar == false){
             return false;
          }
          
