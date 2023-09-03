@@ -12,13 +12,14 @@
 OperacionalTT robo;
 
 //--- input parameters
-input int      periodo_true_range=500;
+input int      period_true_range=500;
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
   {
 //---
+    robo.period_true_range = period_true_range;
     robo.init();  
 //---
    return(INIT_SUCCEEDED);
@@ -37,6 +38,6 @@ void OnDeinit(const int reason)
 void OnTick()
   {
 //---
-    robo.tick();  
+    robo.tickEvent();  
   }
 //+------------------------------------------------------------------+
