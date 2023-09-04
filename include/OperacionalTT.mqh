@@ -29,6 +29,8 @@ public:
      double tick_value;
      double entryPointSt1Buy;
      double entryPointSt1Sell;
+     double entryPointSt2Buy;
+     double entryPointSt2Sell;
      bool new_bar;
      double num_lots;
      datetime deadline;
@@ -46,6 +48,7 @@ public:
          
          closeOperationsForTheDay();
          calculateTrueRangeAvg();
+         st2();
          st1();
          sendOrder();
      }
@@ -79,6 +82,15 @@ public:
         return sequenceLow;
      }
      
+     void clearAllEntryPoints(){
+         entryPointSt1Sell = 0;
+         entryPointSt1Buy = 0;
+         entryPointSt2Buy = 0;
+         entryPointSt2Sell = 0;
+         ObjectDelete(0, "sell here");
+         ObjectDelete(0, "buy here");
+     }
+     
      bool sendOrder(){
          
         if(overdue()){
@@ -90,25 +102,48 @@ public:
         }
         
         if(PositionsTotal() > 0 ){
-            entryPointSt1Sell = 0;
-            entryPointSt1Buy = 0;
-            ObjectDelete(0, "sell here");
-            ObjectDelete(0, "buy here");
+            clearAllEntryPoints();
             return false;
          }
         
-        if(entryPointSt1Sell == 0 && entryPointSt1Buy == 0){
+        if(entryPointSt1Sell == 0 && entryPointSt1Buy == 0
+        && entryPointSt2Buy == 0 && entryPointSt2Sell == 0){
             return false;
         }
         
+        //ST2 send order
+        if(entryPointSt2Sell > 0 && tick.last > entryPointSt2Sell){
+            double stop_loss_price = tick.last + (exponential_true_range_avg * 1.5);//Stop 1.5 TR
+            double tp_price = tick.last - (exponential_true_range_avg * 1.8);// TP 1.8 TR
+            orders.sell(num_lots, stop_loss_price,tp_price);
+             util.textCreate(0,"Sell ST2",0,candles[1].time,(candles[1].low - exponential_true_range_avg),
+            "Venda de ST2 [TP 1.8 TR "+DoubleToString(exponential_true_range_avg, 2)+"]"
+            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);
+            clearAllEntryPoints();
+            return false;
+        }
         
+        if(entryPointSt2Buy > 0 && tick.last < entryPointSt2Buy){
+            double stop_loss_price = tick.last - (exponential_true_range_avg * 1.5); //Stop 1.5 TR
+            double tp_price = tick.last + (exponential_true_range_avg * 1.8);// TP 1.8 TR
+            orders.buy(num_lots, stop_loss_price,tp_price);
+            util.textCreate(0,"Buy-ST2",0,candles[1].time,(candles[1].low - exponential_true_range_avg),
+            "Compra de ST2 [TP 1.8 TR "+DoubleToString(exponential_true_range_avg, 2)+"]"
+            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);
+            clearAllEntryPoints();
+            return false;
+        }
+        
+        //ST1 send order
         if(entryPointSt1Sell > 0 && tick.last > entryPointSt1Sell){
             double stop_loss_price = tick.last + (exponential_true_range_avg * 1.5);//Stop 1.5 TR
             double tp_price = tick.last - exponential_true_range_avg;               // TP 1 TR
             orders.sell(num_lots, stop_loss_price,tp_price);
              util.textCreate(0,"Sell ST1",0,candles[1].time,candles[1].low,
-            "Venda de ST1 TR "+DoubleToString(exponential_true_range_avg, 2)
+            "Venda de ST1 [TP 1 TR "+DoubleToString(exponential_true_range_avg, 2)+"]"
             ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);
+            clearAllEntryPoints();
+            return false;
         }
         
         if(entryPointSt1Buy > 0 && tick.last < entryPointSt1Buy){
@@ -116,10 +151,57 @@ public:
             double tp_price = tick.last + exponential_true_range_avg;                // TP 1 TR
             orders.buy(num_lots, stop_loss_price,tp_price);
             util.textCreate(0,"Buy ST1",0,candles[1].time,candles[1].low,
-            "Compra de ST1 TR "+DoubleToString(exponential_true_range_avg, 2)
+            "Compra de ST1 [TP 1 TR "+DoubleToString(exponential_true_range_avg, 2)+"]"
             ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);
+            clearAllEntryPoints();
+            return false;
         }
         
+        return true;
+     }
+     
+     bool st2(){
+        
+        if(new_bar == false){
+            return false;
+        }
+        
+        if(overdue()){
+           return false;
+        }
+        
+        if(beforeTime()){
+           return false;
+        }
+       
+        int sequenceHigh = getSequenceHigh(7);
+        int sequenceLow = getSequenceLow(7);
+        
+        if(sequenceHigh == 7){
+            util.arrowedLineCreate(0,"ST2 de alta",0,
+                           candles[7].time,candles[7].low,
+                           candles[1].time,candles[1].low,
+                           clrAntiqueWhite,STYLE_DOT,1,false,false);
+            util.textCreate(0,"ST2 de alta-description",0,candles[5].time,candles[5].low,
+            "ST2 de alta"
+            ,"Arial",8,clrAntiqueWhite);
+            entryPointSt2Buy = candles[1].close - (tick_value * 5); // 5ticks
+            
+            util.drawHorizontalLine("buy here",candles[1].time,entryPointSt2Buy,clrCadetBlue);            
+        }
+        
+        if(sequenceLow == 7){
+            util.arrowedLineCreate(0,"ST2 de baixa",0,
+                           candles[7].time,candles[7].high,
+                           candles[1].time,candles[1].low,
+                           clrAntiqueWhite,STYLE_DOT,1,false,false);
+            util.textCreate(0,"ST2 de baixa-description",0,candles[5].time,candles[5].high,
+            "ST2 de baixa"
+            ,"Arial",8,clrAntiqueWhite); 
+            entryPointSt2Sell = candles[1].close + (tick_value * 5); // 4ticks
+            util.drawHorizontalLine("sell here",candles[1].time,entryPointSt2Sell,clrCrimson);                
+        }
+          
         return true;
      }
      
@@ -205,10 +287,12 @@ public:
          TimeToStruct(deadline, deadline_struct);	
          
          if(now_struct.hour > deadline_struct.hour){
+            clearAllEntryPoints();
             return true;
          }	
          	
          if(now_struct.hour == deadline_struct.hour && now_struct.min >= deadline_struct.min){
+            clearAllEntryPoints();
             return true;	
          }
          
@@ -224,10 +308,12 @@ public:
          TimeToStruct(start_time, start_time_struct);	
          
          if(now_struct.hour < start_time_struct.hour){
+            clearAllEntryPoints();
             return true;
          }	
          	
          if(now_struct.hour == start_time_struct.hour && now_struct.min <= start_time_struct.min){
+            clearAllEntryPoints();
             return true;	
          }
          
