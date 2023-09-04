@@ -29,6 +29,29 @@ public:
          return true;
      }
      
+     bool closeAllOperations(){
+         cancelPendingOrders();
+         CTrade trade;
+         int i=PositionsTotal()-1;
+         while (i>=0)
+           {
+            if (trade.PositionClose(PositionGetSymbol(i))) i--;
+           }
+         return true;   
+     }
+     
+     void cancelPendingOrders() {
+         for(int i = OrdersTotal() - 1; i >= 0; i--) {
+             if(OrderGetTicket(i) > 0
+             && OrderGetString(ORDER_SYMBOL) == _Symbol) {
+                    ulong ticket=OrderGetTicket(i);
+                    CTrade *trade=new CTrade();
+                    trade.OrderDelete(ticket);
+                    delete trade;
+             }
+         }
+     }
+     
 };
 //+------------------------------------------------------------------+
 //|                                                                  |

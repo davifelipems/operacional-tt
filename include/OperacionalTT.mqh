@@ -31,6 +31,8 @@ public:
      double entryPointSt1Sell;
      bool new_bar;
      double num_lots;
+     datetime deadline;
+     datetime start_time;
      
      void init(){
          
@@ -42,6 +44,7 @@ public:
          SymbolInfoTick(_Symbol,tick);
          new_bar = util.newBar();
          
+         closeOperationsForTheDay();
          calculateTrueRangeAvg();
          st1();
          sendOrder();
@@ -77,6 +80,14 @@ public:
      }
      
      bool sendOrder(){
+         
+        if(overdue()){
+           return false;
+        }
+        
+        if(beforeTime()){
+           return false;
+        }
         
         if(PositionsTotal() > 0 ){
             entryPointSt1Sell = 0;
@@ -116,7 +127,15 @@ public:
         
         if(new_bar == false){
             return false;
-         }
+        }
+        
+        if(overdue()){
+           return false;
+        }
+        
+        if(beforeTime()){
+           return false;
+        }
        
         int sequenceHigh = getSequenceHigh(5);
         int sequenceLow = getSequenceLow(5);
@@ -128,7 +147,7 @@ public:
                            clrAntiqueWhite,STYLE_DOT,1,false,false);
             util.textCreate(0,"ST1 de alta-description",0,candles[3].time,candles[3].low,
             "ST1 de alta"
-            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);
+            ,"Arial",8,clrAntiqueWhite);
             entryPointSt1Buy = candles[1].close - (tick_value * 4); // 4ticks
             
             util.drawHorizontalLine("buy here",candles[1].time,entryPointSt1Buy,clrCadetBlue);            
@@ -141,7 +160,7 @@ public:
                            clrAntiqueWhite,STYLE_DOT,1,false,false);
             util.textCreate(0,"ST1 de baixa-description",0,candles[3].time,candles[3].high,
             "ST1 de baixa"
-            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0); 
+            ,"Arial",8,clrAntiqueWhite); 
             entryPointSt1Sell = candles[1].close + (tick_value * 4); // 4ticks
             util.drawHorizontalLine("sell here",candles[1].time,entryPointSt1Sell,clrCrimson);                
         }
@@ -176,6 +195,61 @@ public:
                  "Exponential true range avg "+StringFormat("%.5f",exponential_true_range_avg));
          return true;        
      }
+     
+     bool overdue(){
+         datetime now =  TimeCurrent();	
+         MqlDateTime now_struct;	
+         TimeToStruct(now, now_struct);	
+         	
+         MqlDateTime deadline_struct;	
+         TimeToStruct(deadline, deadline_struct);	
+         
+         if(now_struct.hour > deadline_struct.hour){
+            return true;
+         }	
+         	
+         if(now_struct.hour == deadline_struct.hour && now_struct.min >= deadline_struct.min){
+            return true;	
+         }
+         
+         return false;	
+      }
+      
+      bool beforeTime(){
+         datetime now =  TimeCurrent();	
+         MqlDateTime now_struct;	
+         TimeToStruct(now, now_struct);	
+         	
+         MqlDateTime start_time_struct;	
+         TimeToStruct(start_time, start_time_struct);	
+         
+         if(now_struct.hour < start_time_struct.hour){
+            return true;
+         }	
+         	
+         if(now_struct.hour == start_time_struct.hour && now_struct.min <= start_time_struct.min){
+            return true;	
+         }
+         
+         return false;	
+      }
+      
+      bool closeOperationsForTheDay(){
+         if(PositionsTotal() == 0){
+            return false;
+         }
+         
+         MqlDateTime deadline_struct;
+         TimeToStruct(deadline, deadline_struct);
+         
+         if(overdue()){
+            orders.closeAllOperations();
+            util.textCreate(0,"cancel-orders",0,candles[1].time,candles[1].high,
+            "Zera tudo depois de "+deadline_struct.hour+":"+deadline_struct.min
+            ,"Arial",8,clrAntiqueWhite);
+         }
+         return true;
+      }
   };
 //+------------------------------------------------------------------+
 //|                                                                  |
