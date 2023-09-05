@@ -1,5 +1,6 @@
 # Operacional TT - Expert advisor MQL5
-![Preview](https://raw.githubusercontent.com/davifelipems/operacional-tt/main/setup/backtest-tt.gif?token=GHSAT0AAAAAACHBONIG4C7EIP4ILLM4PJWOZHXDFDQ)
+![Preview](https://raw.githubusercontent.com/davifelipems/operacional-tt/8-setup/setup/backtest-tt-2.gif?token=GHSAT0AAAAAACHBONIGAXZRC5YXH4I75AM6ZHXDTRQ)
+![Preview](https://raw.githubusercontent.com/davifelipems/operacional-tt/8-setup/setup/backtest-tt.gif?token=GHSAT0AAAAAACHBONIHTQ7FFH33LX3NDTFOZHXDU4A)
 
 Esse operacional foi divulgado gratuitamente no canal do youtube Trader na Tela. 
 
