@@ -31,10 +31,13 @@ public:
      double entryPointSt1Sell;
      double entryPointSt2Buy;
      double entryPointSt2Sell;
+     double entryPointStlSell;
+     double entryPointStlBuy;
      bool new_bar;
      double num_lots;
      datetime deadline;
      datetime start_time;
+     int stlCandleTimeOut;
      
      void init(){
          
@@ -50,6 +53,7 @@ public:
          calculateTrueRangeAvg();
          st2();
          st1();
+         stl();
          sendOrder();
      }
      
@@ -87,6 +91,8 @@ public:
          entryPointSt1Buy = 0;
          entryPointSt2Buy = 0;
          entryPointSt2Sell = 0;
+         entryPointStlSell = 0;
+         entryPointStlBuy = 0;
          ObjectDelete(0, "sell here");
          ObjectDelete(0, "buy here");
      }
@@ -107,7 +113,8 @@ public:
          }
         
         if(entryPointSt1Sell == 0 && entryPointSt1Buy == 0
-        && entryPointSt2Buy == 0 && entryPointSt2Sell == 0){
+        && entryPointSt2Buy == 0 && entryPointSt2Sell == 0
+        && entryPointStlBuy == 0 && entryPointStlSell == 0){
             return false;
         }
         
@@ -156,6 +163,92 @@ public:
             clearAllEntryPoints();
             return false;
         }
+        
+        //STL send order
+        if(entryPointStlSell > 0 && tick.last > entryPointStlSell){
+            double stop_loss_price = tick.last + (exponential_true_range_avg * 1.2);//Stop 1.2 TR
+            double tp_price = tick.last - (exponential_true_range_avg * 1.5);               // TP 1.5 TR
+            orders.sell(num_lots, stop_loss_price,tp_price);
+             util.textCreate(0,"Sell STL",0,candles[1].time,candles[1].low,
+            "Venda de STL [TP 1.5 TR "+DoubleToString(exponential_true_range_avg, 2)+"]"
+            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);
+            clearAllEntryPoints();
+            return false;
+        }
+        
+        if(entryPointStlBuy > 0 && tick.last < entryPointStlBuy){
+            double stop_loss_price = tick.last - (exponential_true_range_avg * 1.2);//Stop 1.2 TR
+            double tp_price = tick.last + (exponential_true_range_avg * 1.5);               // TP 1.5 TR
+            orders.buy(num_lots, stop_loss_price,tp_price);
+             util.textCreate(0,"Buy STL",0,candles[1].time,candles[1].low,
+            "Compra de STL [TP 1.5 TR "+DoubleToString(exponential_true_range_avg, 2)+"]"
+            ,"Arial",8,clrAntiqueWhite,0.0,ANCHOR_LEFT_UPPER,false,false,true,0);
+            clearAllEntryPoints();
+            return false;
+        }
+        
+        return true;
+     }
+     
+     bool stl(){
+     
+        if(new_bar && stlCandleTimeOut > 0){
+            stlCandleTimeOut--;
+        }
+        
+        if(new_bar && stlCandleTimeOut <= 0 
+        && (entryPointStlSell > 0 || entryPointStlBuy > 0)
+        ){
+            entryPointStlSell = 0;
+            entryPointStlBuy = 0;
+            ObjectDelete(0, "sell here");
+            ObjectDelete(0, "buy here");
+        }
+     
+        if(new_bar == false){
+            return false;
+        }
+        
+        if(overdue()){
+           return false;
+        }
+        
+        if(beforeTime()){
+           return false;
+        }
+        
+        double bodySizeCandle1 = util.getCandleBodySize(candles, 1);
+        double candleSize1 = candles[1].high - candles[1].low;
+        double candleWick1 = candleSize1 - bodySizeCandle1;
+        double percentCandleBody1 = (bodySizeCandle1 * 100) / candleSize1;
+        double percentTrValue = (candleSize1 * 100) / exponential_true_range_avg;
+        
+        if(percentTrValue > 70){
+            return false;
+        }
+        
+        if(percentCandleBody1 < 80){
+           return false;
+        }
+        
+       if(candles[1].close > candles[1].open){
+         util.textCreate(0,"STL de alta-description",0,candles[1].time,candles[1].high,
+            "STL de alta"
+            ,"Arial",8,clrAntiqueWhite);
+            entryPointStlSell = candles[1].close + (exponential_true_range_avg * 0.5); // 0.5TR
+            util.drawHorizontalLine("sell here",candles[1].time,entryPointStlSell,clrCrimson);
+            stlCandleTimeOut = 4;
+       } 
+       
+       if(candles[1].close < candles[1].open){
+         util.textCreate(0,"STL de baixa-description",0,candles[1].time,candles[1].low,
+            "STL de baixa"
+            ,"Arial",8,clrAntiqueWhite);
+            entryPointStlBuy = candles[1].close - (exponential_true_range_avg * 0.5); // 0.5TR
+            util.drawHorizontalLine("buy here",candles[1].time,entryPointStlBuy,clrCadetBlue);
+            stlCandleTimeOut = 4;
+       } 
+       
         
         return true;
      }
