@@ -17,13 +17,26 @@ public:
       Orders();
      ~Orders();
      
+     void normalize(double &price){
+         double tickvalue = SymbolInfoDouble (_Symbol, SYMBOL_TRADE_TICK_SIZE );
+         double c = MathFloor(price/tickvalue);
+         double remainder = price-c*tickvalue;
+         price-=remainder;
+      }
+     
      bool buy(double num_lots, double stop_loss, double tp){
+         int digits = Digits();
+         normalize(stop_loss);
+         normalize(tp);
          CTrade *trade=new CTrade();
          trade.Buy(num_lots, _Symbol, 0, stop_loss, tp);
          return true;
      }
      
      bool sell(double num_lots, double stop_loss, double tp){
+         int digits = Digits();
+         normalize(stop_loss);
+         normalize(tp);
          CTrade *trade=new CTrade();
          trade.Sell(num_lots, _Symbol,0 , stop_loss, tp);
          return true;
